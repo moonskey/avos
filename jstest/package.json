@@ -1,0 +1,10 @@
+{
+  "name": "application-name",
+  "version": "0.0.1",
+  "dependencies":{
+    "express":"4.12.2",
+    "httpclient":"0.0.4",
+    "cheerio":"0.18.0"
+  }
+
+}
