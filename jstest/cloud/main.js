@@ -6,9 +6,7 @@ var https = require('https');
 /**
  * create new class according to different pages
  */
-var BreadInfo = AV.Object.extend("BreadInfo");
-var QunarInfo = AV.Object.extend("QunarInfo");
-var DaoDaoInfo = AV.Object.extend("DaodaoInfo");
+var DetailInfo = AV.Object.extend("DetailInfo");
 
 /**
  *breadtrip,done
@@ -48,14 +46,15 @@ var rules_breadtrip = {
 };
 
 /**
- *qunar,done
+ *qunar,done,with all runing
  * @type {{starturl: string, eachitem: string, title: string, startdate: string, duration: string, description: string, author: string, pre_url: string, needpre: string, authorindetail: string, detailitem: string, date: string, detaildescription: string}}
  */
 var rules_qunar = {
     "starturl":"http://travel.qunar.com/travelbook/list.htm?order=hot_heat",
     "testurl":"http://travel.qunar.com/youji/5305677",
-    //save
-    "class":"new QunarInfo()",
+
+    //save tag
+    "source":"qunar",
     //in list
     "eachitem":".list_item",
     "pre_url":"http://travel.qunar.com",
@@ -63,9 +62,9 @@ var rules_qunar = {
     //"title":".tit",
     "title":"$(e).find('.tit').text()",
     //"author":"",
-    "author":".user_name",
+    "author":"$(e).find('.user_name').text()",
     //"startdate":".date",
-    "startdate":"$(e).find('.date').text()",
+    "startdate":"$(e).find('.date').text().split(' ')[0]",
     //"duration":".days",
     "duration":"$(e).find('.days').text()",
     //"brief":""
@@ -337,32 +336,11 @@ var rules_lvmama = {
  */
 AV.Cloud.define("parselist",function(request,response){
     var rules = eval(request.params.rules);
-    //var rules = rules_qunar;
-    var url = rules.starturl;
-    console.log(rules);
-    console.log(url);
+    //var url = rules.starturl;
+    var url = request.params.url;
+    //console.log(rules);
+    //console.log(url);
     var res=[];
-    /*AV.Cloud.httpRequest({})
-        .then(function(httpResponse){
-            var results = [];
-            results.forEach(function(result){
-                var query = new AV.Query(BreadInfo);
-                query.equalTo("url", pageurl);
-                query.first().then(function(exists){
-                    return AV.Cloud.run("parsecontent1",{url:pageurl});
-                }).then(function(){
-
-                }).then(function(){
-
-                },function(err){
-
-                })
-            })
-        },function(err){
-
-        })*/
-
-
     AV.Cloud.httpRequest({
         url: url,
         success: function(httpResponse) {
@@ -382,42 +360,11 @@ AV.Cloud.define("parselist",function(request,response){
                 ans.startdate = eval(rules.startdate);
                 ans.duration = eval(rules.duration);
                 ans.description = eval(rules.description);
-                console.log(ans);
-                /*ans.title=$(e).find(rules.title).text();
-                 ans.startdate=$(e).find(rules.startdate).text();
-                 ans.duration=$(e).find(rules.duration).text();
-                 ans.description=$(e).find(rules.description).text();*/
-                res.push[ans];
-                //find url
-                /*var query = new AV.Query(BreadInfo);
-                query.equalTo("url", pageurl);
-                //if find,do nothing
-                query.find().then(function(results){
-                },function(error){
-                    //elee parsedetail
-                    AV.Cloud.run("parsecontent1",{url:pageurl}, {
-                        success: function (data) {
-                            ans.tours = data;
-                        },
-                        error: function (err) {
-                        }
-                    }).then(function(){
-                        saveInfo(ans);
-                    })
-
-                    AV.Cloud.run("parsecontent1",{url:pageurl})
-                        .then(function(data){
-                            ans.tours = data;
-                            return saveInfo(ans);
-                        },function(err) {
-                            // parser failed
-                        })
-                        .then(function(){
-                            // save completed
-                        },function(err){
-                            // save failed
-                        })
-                });*/
+                ans.author = eval(rules.author);
+                ans.brief = eval(rules.brief);
+                ans.tours = "";
+                ans.source = rules.source;
+                res.push(ans);
             });
         },
         error: function(httpResponse) {
@@ -425,7 +372,6 @@ AV.Cloud.define("parselist",function(request,response){
         }
     }).then(function(){
         response.success(res);
-        //console.log(res);
     });
 });
 /**
@@ -440,9 +386,9 @@ AV.Cloud.define("parselist",function(request,response){
 AV.Cloud.define("parsedetailpage", function(request,response) {
     var rules = eval(request.params.rules);
     //var rules = rules_qunar;
-    var url = rules.testurl;
+    var url = request.params.url;
     var res=[];
-    console.log(url);
+    //console.log(url);
     AV.Cloud.httpRequest({
         url: url,
         success: function(httpResponse) {
@@ -476,7 +422,7 @@ AV.Cloud.define("parsedetailpage", function(request,response) {
                     ans.index = i;
                     ans.date = $(e).find(".t-day-sp-date").text();
                     var des = "";
-                    console.log(idstr);
+                    //console.log(idstr);
                     $(e).parent().find(idstr).each(function (i, e) {
                         var idx = $(e).attr("data-feed");
                         var str = "[id=tFeed" + idx + "]";
@@ -484,7 +430,7 @@ AV.Cloud.define("parsedetailpage", function(request,response) {
                         des = des + pt + "\n\r";
                     });
                     ans.description = des;
-                    console.log(ans);
+                    //console.log(ans);
                     res.push(ans);
                 });
             }
@@ -512,15 +458,18 @@ AV.Cloud.define("parsedetailpage", function(request,response) {
  * @param ans
  */
 var saveInfo = function(ans){
-    var deatilInfo = new DeatilInfo();
-    deatilInfo.set("type","tour");
-    deatilInfo.set("url",ans.url);
-    deatilInfo.set("title",ans.title);
-    deatilInfo.set("stardate",ans.startdate);
-    deatilInfo.set("duration",ans.duration);
-    deatilInfo.set("description",ans.description);
-    deatilInfo.set("tours",ans.tours);
-    return deatilInfo.save();
+    var detailInfo = new DetailInfo();
+    detailInfo.set("source",ans.source);
+    detailInfo.set("type","tour");
+    detailInfo.set("url",ans.url);
+    detailInfo.set("title",ans.title);
+    detailInfo.set("authorName",ans.author);
+    detailInfo.set("startDate",ans.startdate);
+    detailInfo.set("duration",ans.duration);
+    detailInfo.set("brief",ans.brief);
+    detailInfo.set("description",ans.description);
+    detailInfo.set("tours",ans.tours);
+    return detailInfo.save();
 }
 /**
  *
@@ -528,4 +477,39 @@ var saveInfo = function(ans){
 AV.Cloud.define("hello",function(request,response){
     var url = request.params.url;
      response.success("success");
+});
+
+AV.Cloud.define("pagelist",function(request,response){
+    var rules = eval(request.params.rules);
+    var url = request.params.url;
+    //qunar
+    for(var i=1;i<3;i++){
+        var starturl = "http://travel.qunar.com/travelbook/list.htm?page="+i+"&order=hot_heat";
+        AV.Cloud.run("parselist",{"rules":request.params.rules,"url":starturl})
+            .then(function(items) {
+                //console.log(res);
+                items.forEach(function (item) {
+                    console.log(item.url);
+                    var query = new AV.Query(DetailInfo);
+                    query.equalTo("url", item.url);
+                    //if find,do nothing
+                    query.find().then(function () {
+                        //do nothing
+                        return AV.Promise.error("have been parsed");
+                    }, function (err) {
+                        return AV.Promise.as("Continue");
+                    }).then(function () {
+                        AV.Cloud.run("parsedetailpage", {"rules": request.params.rules, "url": item.url})
+                            .then(function (ans) {////???????
+                                item.tours = ans;
+                                saveInfo(item);
+                            }
+                        )
+                    });
+                });
+            },function(err) {
+                console.log("parselist err");
+            });
+    };
+    response.success("success");
 });
