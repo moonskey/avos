@@ -494,13 +494,14 @@ AV.Cloud.define("breadtrip",function(request,response){
                     var query = new AV.Query(DetailInfo);
                     query.equalTo("url", item.url);
                     //if find,do nothing
-                    query.find().then(function () {
-                        console.log("have found");
-                        //do nothing
-                        return AV.Promise.error("have been parsed");
+                    query.find().then(function (result) {
+                        if(result.length==0){
+                            return AV.Promise.as("Continue");
+                        }else{
+                            return AV.Promise.error(item.url + " have been parsed");
+                        }
                     }, function (err) {
-                        console.log("not found");
-                        return AV.Promise.as("Continue");
+                        console.log("query error");
                     }).then(function () {
                         AV.Cloud.run("parsedetailpage", {"rules": rules_breadtrip, "url": item.url})
                             .then(function (ans) {////???????
@@ -573,13 +574,14 @@ AV.Cloud.define("chanyouji",function(request,response){
                                         var query = new AV.Query(DetailInfo);
                                         query.equalTo("url", item.url);
                                         //if find,do nothing
-                                        query.find().then(function () {
-                                            console.log("have found");
-                                            //do nothing
-                                            return AV.Promise.error("have been parsed");
+                                        query.find().then(function (result) {
+                                            if(result.length==0){
+                                                return AV.Promise.as("Continue");
+                                            }else{
+                                                return AV.Promise.error(item.url + " have been parsed");
+                                            }
                                         }, function (err) {
-                                            console.log("not found");
-                                            return AV.Promise.as("Continue");
+                                            console.log("query error");
                                         }).then(function () {
                                             AV.Cloud.run("parsedetailpage", {"rules":rules_chanyou, "url": item.url})
                                                 .then(function (ans) {
@@ -614,22 +616,27 @@ AV.Cloud.define("qunar",function(requset,response){
         url: "http://travel.qunar.com/travelbook/list.htm?page=1&order=hot_heat",
         success: function (httpResponse) {
             var page = httpResponse.text;
+            console.log("13114");
             $ = cheerio.load(page);
-            var tmp = $(".next").text();
+            var tmp = $("[data-beacon=click_result_page]").last().text();
+            console.log(tmp);
             for (var i = 1; i <= tmp; i++) {
                 var starturl = "http://travel.qunar.com/travelbook/list.htm?page=" + i + "&order=hot_heat";
+                console.log(starturl);
                 AV.Cloud.run("parselist", {"rules": rules_qunar, "url": starturl})
                     .then(function (items) {
-                        //console.log(res);
                         items.forEach(function (item) {
                             console.log(item.url);
                             var query = new AV.Query(DetailInfo);
                             query.equalTo("url", item.url);
-                            query.find().then(function () {
-                                return AV.Promise.error(item.url + " have been parsed");
+                            query.find().then(function (result) {
+                                if(result.length==0){
+                                    return AV.Promise.as("Continue");
+                                }else{
+                                    return AV.Promise.error(item.url + " have been parsed");
+                                }
                             }, function (err) {
-                                console.log("not found");
-                                return AV.Promise.as("Continue");
+                                console.log("query error");
                             }).then(function () {
                                 AV.Cloud.run("parsedetailpage", {"rules": rules_qunar, "url": item.url})
                                     .then(function (ans) {
@@ -670,13 +677,14 @@ AV.Cloud.define("117go",function(request,response){
                     var query = new AV.Query(DetailInfo);
                     query.equalTo("url", item.url);
                     //if find,do nothing
-                    query.find().then(function () {
-                        console.log("have found");
-                        //do nothing
-                        return AV.Promise.error("have been parsed");
+                    query.find().then(function (result) {
+                        if(result.length==0){
+                            return AV.Promise.as("Continue");
+                        }else{
+                            return AV.Promise.error(item.url + " have been parsed");
+                        }
                     }, function (err) {
-                        console.log("not found");
-                        return AV.Promise.as("Continue");
+                        console.log("query error");
                     }).then(function () {
                         AV.Cloud.run("parsedetailpage", {"rules": rules, "url": item.url})
                             .then(function (ans) {////???????
@@ -718,11 +726,14 @@ AV.Cloud.define("tuniu",function(requset,response){
                             console.log(item.url);
                             var query = new AV.Query(DetailInfo);
                             query.equalTo("url", item.url);
-                            query.find().then(function () {
-                                return AV.Promise.error(item.url + " have been parsed");
+                            query.find().then(function (result) {
+                                if(result.length==0){
+                                    return AV.Promise.as("Continue");
+                                }else{
+                                    return AV.Promise.error(item.url + " have been parsed");
+                                }
                             }, function (err) {
-                                console.log("not found");
-                                return AV.Promise.as("Continue");
+                                console.log("query error");
                             }).then(function () {
                                 AV.Cloud.run("parsedetailpage", {"rules": rules, "url": item.url})
                                     .then(function (ans) {
@@ -768,11 +779,14 @@ AV.Cloud.define("lvmama",function(requset,response){
                             console.log(item.url);
                             var query = new AV.Query(DetailInfo);
                             query.equalTo("url", item.url);
-                            query.find().then(function () {
-                                return AV.Promise.error(item.url + " have been parsed");
+                            query.find().then(function (result) {
+                                if(result.length==0){
+                                    return AV.Promise.as("Continue");
+                                }else{
+                                    return AV.Promise.error(item.url + " have been parsed");
+                                }
                             }, function (err) {
-                                console.log("not found");
-                                return AV.Promise.as("Continue");
+                                console.log("query error");
                             }).then(function () {
                                 AV.Cloud.run("parsedetailpage", {"rules": rules, "url": item.url})
                                     .then(function (ans) {
@@ -815,11 +829,14 @@ AV.Cloud.define("daodao",function(requset,response){
                             console.log(item.url);
                             var query = new AV.Query(DetailInfo);
                             query.equalTo("url", item.url);
-                            query.find().then(function () {
-                                return AV.Promise.error(item.url + " have been parsed");
+                            query.find().then(function (result) {
+                                if(result.length==0){
+                                    return AV.Promise.as("Continue");
+                                }else{
+                                    return AV.Promise.error(item.url + " have been parsed");
+                                }
                             }, function (err) {
-                                console.log("not found");
-                                return AV.Promise.as("Continue");
+                                console.log("query error");
                             }).then(function () {
                                 AV.Cloud.run("parsedetailpage", {"rules": rules, "url": item.url})
                                     .then(function (ans) {
