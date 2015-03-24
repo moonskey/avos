@@ -117,7 +117,7 @@ var rules_daodao = {
 };
 
 /**
- * ctrip,done
+ * ctrip,done ,with all running
  * .journal-item? .li
  * @type {{starturl: string, testurl: string, class: string, eachitem: string, pre_url: string, needpre: string, title: string, startdate: string, duration: string, brief: string, description: string, author: string, authorindetail: string, detailitem: string, date: string, detaildescription: string}}
  */
@@ -127,21 +127,21 @@ var rules_ctrip = {
     //save
     "source":"ctrip",
     //in list
-    "eachitem":".city",
+    "eachitem":".journal-item",
     "pre_url":"http://you.ctrip.com",
-    "needpre":"1",
+    "needpre":"2",
     //"title":"h3",
-    "title":"$(e).find('.cpt').text()",
-    //"author":"",
-    "author":"$(e).find('.author').find('a').eq(1).text()",
-    //"startdate":".date",
-    "startdate":"$(e).find('.fr').find('i').text()",
+    "title":"$(e).find('.ellipsis').text()",
+    //"author":"",.split('发')[0]
+    "author":"$(e).find('.item-user').text()",
+    //"startdate":".date",.split(';')[1]
+    "startdate":"$(e).find('.item-user').text()",
     //"duration":".days",
-    "duration":"$(e).find('.days').text()",
+    "duration":"$(e).find('.tips_a').text().split('，')[0]",
     //"brief":".geo",
     "brief":"$(e).find('.item-short').text()",
     //"description":".places",
-    "description":"$(e).text()",
+    "description":"$(e).find('.item-short').text()",
 
     //in detail
     "authorindetail":".trip-user",
@@ -158,33 +158,33 @@ var rules_ctrip = {
  * @type {{starturl: string, testurl: string, class: string, eachitem: string, pre_url: string, needpre: string, title: string, startdate: string, duration: string, brief: string, description: string, author: string, authorindetail: string, detailitem: string, date: string, detaildescription: string}}
  */
 var rules_qyer = {
-    "starturl":"http://place.qyer.com/",
-    "testurl":"http://place.qyer.com/mguide/2742",
+    "starturl":"http://plan.qyer.com/search_0_0_186_0_0_0_1/",
+    "testurl":"http://plan.qyer.com/trip/V2UJYVFgBzdTbFI2Cm8/",
     //save
     "source":"qyer",
     //in list
-    "eachitem":".piclist li",
+    "eachitem":".list .items",
     "pre_url":"http://www.qyer.com",
     "needpre":"0",
     //"title":".title",
-    "title":"$(e).find('.title').find('span').text()",
+    "title":"$(e).find('.fontYaHei').find('dd').text()",
     //"startdate":".date",
-    "startdate":"$(e).find('.date').text()",
+    "startdate":"$(e).find('.fontYaHei').find('dt').text().split(' ')[0]",
     //"duration":".days",
     "duration":"$(e).find('.day').text()",
     //"brief":".geo",
-    "brief":"$(e).find('.fontYaHei').text()",
+    "brief":"$(e).find('.content').find('.plan').text()",
     //"description":".places",
-    "description":"$(e).find('.fontYaHei').text()",
+    "description":"$(e).find('.content').find('.plan').text()",
     "author":"$(e).find('.name').text()",
 
     //in detail
     "authorindetail":".trip-user",
-    "detailitem":".mg-left",
+    "detailitem":".day_item",
     //".date":".time",
     "date":"$(e).find('.day_time').text()",
     //"detaildescription":".text"
-    "detaildescription":"$(e).find('ul').text()"
+    "detaildescription":"$(e).find('.note_row').find('p').text()"
 };
 
 /**
@@ -351,9 +351,11 @@ AV.Cloud.define("parselist",function(request,response){
                 //save outline info
                 var ans={};
                 var pageurl;
+                if(rules.needpre==2)
+                    pageurl = rules.pre_url + $(e).parent().find(rules.eachitem).eq(i).attr('href');
                 if(rules.needpre==1)
                     pageurl = rules.pre_url + $(e).find('a').attr('href');
-                else
+                if(rules.needpre==0)
                     pageurl =  $(e).find('a').attr('href');
                 ans.type="tour";
                 ans.url = pageurl;
@@ -481,16 +483,15 @@ AV.Cloud.define("hello",function(request,response){
 });
 //deal with breadtrip
 AV.Cloud.define("breadtrip",function(request,response){
-   rules = rules_breadtrip;
-   loop = true;
+    rules = "rules_breadtrip";
+    loop = true;
     var i = 0;
     while(loop){
-        var starturl;"http://breadtrip.com/explore/new_hot/grid/?page="+i;
-        AV.Cloud.run("parselist",{"rules":rules_breadtrip,"url":starturl})
+        var starturl = "http://breadtrip.com/explore/new_hot/grid/?page="+i;
+        console.log("starturl: " + starturl);
+        AV.Cloud.run("parselist",{"rules":"rules_breadtrip","url":starturl})
             .then(function(items) {
-                //console.log(res);
                 items.forEach(function (item) {
-                    console.log(item.url);
                     var query = new AV.Query(DetailInfo);
                     query.equalTo("url", item.url);
                     //if find,do nothing
@@ -503,7 +504,7 @@ AV.Cloud.define("breadtrip",function(request,response){
                     }, function (err) {
                         console.log("query error");
                     }).then(function () {
-                        AV.Cloud.run("parsedetailpage", {"rules": rules_breadtrip, "url": item.url})
+                        AV.Cloud.run("parsedetailpage", {"rules": rules, "url": item.url})
                             .then(function (ans) {////???????
                                 item.tours = ans;
                                 saveInfo(item);
@@ -566,7 +567,7 @@ AV.Cloud.define("chanyouji",function(request,response){
                             var starturl;
                             starturl = surl + "&page=" + i;
                             console.log(starturl);
-                            AV.Cloud.run("parselist",{"rules":rules_chanyou,"url":starturl})
+                            AV.Cloud.run("parselist",{"rules":"rules_chanyou","url":starturl})
                                 .then(function(items) {
                                     //console.log(res);
                                     items.forEach(function (item) {
@@ -583,7 +584,7 @@ AV.Cloud.define("chanyouji",function(request,response){
                                         }, function (err) {
                                             console.log("query error");
                                         }).then(function () {
-                                            AV.Cloud.run("parsedetailpage", {"rules":rules_chanyou, "url": item.url})
+                                            AV.Cloud.run("parsedetailpage", {"rules":"rules_chanyou", "url": item.url})
                                                 .then(function (ans) {
                                                     item.tours = ans;
                                                     saveInfo(item);
@@ -623,7 +624,7 @@ AV.Cloud.define("qunar",function(requset,response){
             for (var i = 1; i <= tmp; i++) {
                 var starturl = "http://travel.qunar.com/travelbook/list.htm?page=" + i + "&order=hot_heat";
                 console.log(starturl);
-                AV.Cloud.run("parselist", {"rules": rules_qunar, "url": starturl})
+                AV.Cloud.run("parselist", {"rules": "rules_qunar", "url": starturl})
                     .then(function (items) {
                         items.forEach(function (item) {
                             console.log(item.url);
@@ -638,7 +639,7 @@ AV.Cloud.define("qunar",function(requset,response){
                             }, function (err) {
                                 console.log("query error");
                             }).then(function () {
-                                AV.Cloud.run("parsedetailpage", {"rules": rules_qunar, "url": item.url})
+                                AV.Cloud.run("parsedetailpage", {"rules": "rules_qunar", "url": item.url})
                                     .then(function (ans) {
                                         item.tours = ans;
                                         saveInfo(item);
@@ -664,11 +665,11 @@ AV.Cloud.define("qunar",function(requset,response){
  * deal with 117go
  **/
 AV.Cloud.define("117go",function(request,response){
-    var rules = rules_117go;
+    var rules = "rules_117go";
     loop = true;
     var i = 0;
     while(loop){
-        var starturl;"http://www.117go.com/data/index/featuredTours?p="+i;
+        var starturl = "http://www.117go.com/data/index/featuredTours?p="+i;
         AV.Cloud.run("parselist",{"rules":rules,"url":starturl})
             .then(function(items) {
                 //console.log(res);
@@ -709,7 +710,7 @@ AV.Cloud.define("117go",function(request,response){
  *deal with tuniu
  **/
 AV.Cloud.define("tuniu",function(requset,response){
-    var rules = rules_tuniu;
+    var rules = "rules_tuniu";
     AV.Cloud.httpRequest({
         url: "http://trips.tuniu.com/",
         success: function (httpResponse) {
@@ -761,7 +762,7 @@ AV.Cloud.define("tuniu",function(requset,response){
  *deal with lvmama
  **/
 AV.Cloud.define("lvmama",function(requset,response){
-    var rules = rules_lvmama;
+    var rules = "rules_lvmama";
     AV.Cloud.httpRequest({
         url: "http://www.lvmama.com/trip/",
         success: function (httpResponse) {
@@ -814,14 +815,14 @@ AV.Cloud.define("lvmama",function(requset,response){
  *deal with daodao
  **/
 AV.Cloud.define("daodao",function(requset,response){
-    var rules = rules_daodao;
+    var rules = "rules_daodao";
     AV.Cloud.httpRequest({
         url: "http://www.daodao.com/TourismBlog-g293915-Thailand.html",
         success: function (httpResponse) {
             var page = httpResponse.text;
             $ = cheerio.load(page);
             $(".stb-tabs li").each(function(i,e){
-                var starturl = "http://www.daodao.com/" + $(e).find("a").attr("href");
+                var starturl = "http://www.daodao.com" + $(e).find("a").attr("href");
                 AV.Cloud.run("parselist", {"rules": rules, "url": starturl})
                     .then(function (items) {
                         //console.log(res);
@@ -859,4 +860,186 @@ AV.Cloud.define("daodao",function(requset,response){
     });
 
 
+});
+/**
+ *deal with ctrip
+ **/
+//ctrip get all start pages
+AV.Cloud.define("pagelist_ctrip",function(request,response){
+    var url = "http://you.ctrip.com/travels";
+    var res = [];
+    AV.Cloud.httpRequest({
+        url: url,
+        success: function(httpResponse) {
+            var page = httpResponse.text;
+            $=cheerio.load(page);
+            $(".despop_box dd").each(function(i,e){
+                //save basic info
+                var ans = "http://you.ctrip.com"+ $(e).find("a").attr("href");
+                res.push(ans);
+            });
+        },
+        error: function(httpResponse) {
+            console.error('Request failed with response code ' + httpResponse.status);
+        }
+    }).then(function(){
+        response.success(res);
+    });
+});
+
+/**
+ * ctrip,dealwith ctrip
+ **/
+
+AV.Cloud.define("ctrip",function(request,response){
+    var rules = "rules_ctrip";
+    AV.Cloud.run("pagelist_ctrip")
+        .then(function(res){
+            res.forEach(function(surl){
+                var stop = 1;
+                AV.Cloud.httpRequest({
+                    url: surl,
+                    success: function(httpResponse) {
+                        var page = httpResponse.text;
+                        $=cheerio.load(page);
+                        var tmp = $(".pager_v1 span .numpage").text();
+                        if(tmp!=null)
+                            stop = tmp;
+
+                        for(var i=1;i<=stop;i++){
+                            var starturl = surl.replace(".html","")+"/t3-p"+i+".html";
+                            console.log(starturl);
+                            AV.Cloud.run("parselist",{"rules":rules,"url":starturl})
+                                .then(function(items) {
+                                    items.forEach(function (item) {
+                                        var query = new AV.Query(DetailInfo);
+                                        query.equalTo("url", item.url);
+                                        //if find,do nothing
+                                        query.find().then(function (result) {
+                                            if(result.length==0){
+                                                return AV.Promise.as("Continue");
+                                            }else{
+                                                return AV.Promise.error(item.url + " have been parsed");
+                                            }
+                                        }, function (err) {
+                                            console.log("query error");
+                                        }).then(function () {
+                                            AV.Cloud.run("parsedetailpage", {"rules":rules, "url": item.url})
+                                                .then(function (ans) {
+                                                    item.tours = ans;
+                                                    saveInfo(item);
+                                                }
+                                            )
+                                        }).then(function(err){
+                                            console.log("have been parsed");
+                                        });
+                                    });
+                                },function(err) {
+                                    console.log("parselist err");
+                                });
+                        }
+                    },
+                    error: function(httpResponse) {
+                        console.error('Request failed with response code ' + httpResponse.status);
+                    }
+                }).then(function(){
+                    response.success(res);
+                });
+
+            })
+        }).then(function(){
+            response.success("done");
+        })
+});
+/**
+ *deal with qyer
+ **/
+//ctrip get all start pages
+AV.Cloud.define("pagelist_qyer",function(request,response){
+    var url = "http://plan.qyer.com/";
+    var res = [];
+    AV.Cloud.httpRequest({
+        url: url,
+        success: function(httpResponse) {
+            var page = httpResponse.text;
+            $=cheerio.load(page);
+            $(".tabMain li").each(function(i,e){
+                //save basic info
+                var ans = $(e).find("a").attr("href");
+                res.push(ans);
+                console.log(res);
+            });
+        },
+        error: function(httpResponse) {
+            console.error('Request failed with response code ' + httpResponse.status);
+        }
+    }).then(function(){
+        response.success(res);
+    });
+});
+
+/**
+ * qyer,dealwith qyer
+ **/
+
+AV.Cloud.define("qyer",function(request,response){
+    var rules = "rules_qyer";
+    AV.Cloud.run("pagelist_qyer")
+        .then(function(res){
+            res.forEach(function(surl){
+                var stop = 1;
+                AV.Cloud.httpRequest({
+                    url: surl,
+                    success: function(httpResponse) {
+                        var page = httpResponse.text;
+                        $=cheerio.load(page);
+                        var tmp = $("[data-bn-ipg=pages-4]").attr("data-page");
+                        if(tmp!=null)
+                            stop = tmp;
+                        console.log(stop);
+                        for(var i=1;i<=stop;i++){
+                            var starturl = surl.replace(/_1\//,"")+"_"+i+"/";
+
+                            console.log(starturl);
+                            AV.Cloud.run("parselist",{"rules":rules,"url":starturl})
+                                .then(function(items) {
+                                    items.forEach(function (item) {
+                                        var query = new AV.Query(DetailInfo);
+                                        query.equalTo("url", item.url);
+                                        //if find,do nothing
+                                        query.find().then(function (result) {
+                                            if(result.length==0){
+                                                return AV.Promise.as("Continue");
+                                            }else{
+                                                return AV.Promise.error(item.url + " have been parsed");
+                                            }
+                                        }, function (err) {
+                                            console.log("query error");
+                                        }).then(function () {
+                                            AV.Cloud.run("parsedetailpage", {"rules":rules, "url": item.url})
+                                                .then(function (ans) {
+                                                    item.tours = ans;
+                                                    saveInfo(item);
+                                                }
+                                            )
+                                        }).then(function(err){
+                                            console.log("have been parsed");
+                                        });
+                                    });
+                                },function(err) {
+                                    console.log("parselist err");
+                                });
+                        }
+                    },
+                    error: function(httpResponse) {
+                        console.error('Request failed with response code ' + httpResponse.status);
+                    }
+                }).then(function(){
+                    response.success(res);
+                });
+
+            })
+        }).then(function(){
+            response.success("done");
+        })
 });
