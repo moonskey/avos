@@ -114,7 +114,7 @@ var rules_daodao = {
     //".date":".time",
     "date":"$(e).find('.time').text()",
     //"detaildescription":".text"
-    "detaildescription":"$(e).find('.strategy-contents').text()"
+    "detaildescription":"$(e).text()"
 };
 
 /**
@@ -233,7 +233,7 @@ var rules_chanyou = {
 var rules_117go = {
     "starturl":"http://www.117go.com",
     "testurl":"http://www.117go.com/tour/53856965",
-    "regex":"2",
+    "regax":"2",
     //save
     "source":"117go",
     //in list
@@ -413,30 +413,36 @@ AV.Cloud.define("parsedetailpage", function(request,response) {
     //var rules = rules_qunar;
     var url = request.params.url;
     var res=[];
-    //console.log(url);
+    console.log(url);
     AV.Cloud.httpRequest({
         url: url,
+        headers: {
+            'User-Agent':'Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.1.6) Gecko/20091201 Firefox/3.5.6'
+        },
         success: function(httpResponse) {
+            console.log(url);
             var page = httpResponse.text;
             $=cheerio.load(page);
 
            // var str = /(?=parse)/;
             if(rules.regax==1){
                 var tmp =  page.replace(/[.\S\s]*TripsCollection\(/,"").replace(/\,\{parse.+/,"");
+                if(tmp==null)
+                    response.success(null);
                 var arr = JSON.parse(tmp);
                 var index = -1;
                 var ans = {};
                 for(var item in arr){
                     //console.log(arr[item].sid);
-                    if(arr[item].weather==0){
+                    if(arr[item].trip_date==null){
+                        res[index].description =  res[index].description + arr[item].description + "\n\r";
+                    }else{
                         index ++;
                         ans.index = index;
                         ans.date = arr[item].trip_date;
                         ans.description = "";
                         res.push(ans);
                         ans={};
-                    }else{
-                        res[index].description =  res[index].description + arr[item].description + "\n\r";
                     }
                 }
             }
@@ -472,6 +478,7 @@ AV.Cloud.define("parsedetailpage", function(request,response) {
             }
         },
         error: function(httpResponse) {
+            console.log(url);
             console.error('Request failed with response code ' + httpResponse.status);
         }
     }).then(function(){
@@ -508,7 +515,7 @@ AV.Cloud.define("breadtrip",function(request,response){
     rules = "rules_breadtrip";
     for(var i=0;i<472;i++){
         var starturl = "http://breadtrip.com/explore/new_hot/grid/?page="+i;
-        console.log("starturl: " + starturl);
+        //console.log("starturl: " + starturl);
         AV.Cloud.run("parselist",{"rules":"rules_breadtrip","url":starturl})
             .then(function(items) {
                 items.forEach(function (item) {
@@ -530,7 +537,7 @@ AV.Cloud.define("breadtrip",function(request,response){
                                 saveInfo(item);
                             }
                         )
-                    }).then(function(err){
+                    },function(err){
                         console.log("have been parsed");
                     });
                 });
@@ -585,12 +592,12 @@ AV.Cloud.define("chanyouji",function(request,response){
                         for(var i=1;i<=stop;i++){
                             var starturl;
                             starturl = surl + "&page=" + i;
-                            console.log(starturl);
+                            //console.log(starturl);
                             AV.Cloud.run("parselist",{"rules":"rules_chanyou","url":starturl})
                                 .then(function(items) {
                                     //console.log(res);
                                     items.forEach(function (item) {
-                                        console.log(item.url);
+                                        //console.log(item.url);
                                         var query = new AV.Query(DetailInfo);
                                         query.equalTo("url", item.url);
                                         //if find,do nothing
@@ -609,7 +616,7 @@ AV.Cloud.define("chanyouji",function(request,response){
                                                     saveInfo(item);
                                                 }
                                             )
-                                        }).then(function(err){
+                                        },function(err){
                                             console.log("have been parsed");
                                         });
                                     });
@@ -626,9 +633,8 @@ AV.Cloud.define("chanyouji",function(request,response){
                 });
 
             })
-        }).then(function(){
-            response.success("done");
-        })
+        });
+    response.success("done");
 });
 //deal with qunar
 AV.Cloud.define("qunar",function(requset,response){
@@ -640,11 +646,11 @@ AV.Cloud.define("qunar",function(requset,response){
             var tmp = $("[data-beacon=click_result_page]").last().text();
             for (var i = 1; i <= tmp; i++) {
                 var starturl = "http://travel.qunar.com/travelbook/list.htm?page=" + i + "&order=hot_heat";
-                console.log(starturl);
+                //console.log(starturl);
                 AV.Cloud.run("parselist", {"rules": "rules_qunar", "url": starturl})
                     .then(function (items) {
                         items.forEach(function (item) {
-                            console.log(item.url);
+                            //console.log(item.url);
                             var query = new AV.Query(DetailInfo);
                             query.equalTo("url", item.url);
                             query.find().then(function (result) {
@@ -675,7 +681,7 @@ AV.Cloud.define("qunar",function(requset,response){
             console.error('Request failed with response code ' + httpResponse.status);
         }
     });
-
+    response.success("done");
 });
 
 /**
@@ -689,7 +695,7 @@ AV.Cloud.define("117go",function(request,response){
             .then(function(items) {
                 //console.log(res);
                 items.forEach(function (item) {
-                    console.log(item.url);
+                    //console.log(item.url);
                     var query = new AV.Query(DetailInfo);
                     query.equalTo("url", item.url);
                     //if find,do nothing
@@ -700,7 +706,7 @@ AV.Cloud.define("117go",function(request,response){
                             return AV.Promise.error(item.url + " have been parsed");
                         }
                     }, function (err) {
-                        console.log("query error");
+                        console.log(err+" query failed");
                     }).then(function () {
                         AV.Cloud.run("parsedetailpage", {"rules": rules, "url": item.url})
                             .then(function (ans) {////???????
@@ -708,8 +714,8 @@ AV.Cloud.define("117go",function(request,response){
                                 saveInfo(item);
                             }
                         )
-                    }).then(function(err){
-                        console.log("have been parsed");
+                    },function(err){
+                        console.log("err");
                     });
                 });
             },function(err) {
@@ -718,57 +724,87 @@ AV.Cloud.define("117go",function(request,response){
     }
     response.success("success");
 })
-
+/**
+ * tuniu pagelist
+ */
+AV.Cloud.define("pagelist_tuniu",function(request,response){
+    var url = "http://trips.tuniu.com/";
+    var res = [];
+    AV.Cloud.httpRequest({
+        url: url,
+        success: function(httpResponse) {
+            var page = httpResponse.text;
+            $=cheerio.load(page);
+            $(".sub_item li").each(function(i,e){
+                //save basic info
+                var ans = "http://trips.tuniu.com"+ $(e).find("a").attr("href");
+                res.push(ans);
+            });
+        },
+        error: function(httpResponse) {
+            console.error('Request failed with response code ' + httpResponse.status);
+        }
+    }).then(function(){
+        response.success(res);
+    });
+});
 /**
  *deal with tuniu
  **/
 AV.Cloud.define("tuniu",function(requset,response){
     var rules = "rules_tuniu";
-    AV.Cloud.httpRequest({
-        url: "http://trips.tuniu.com/",
-        success: function (httpResponse) {
-            var page = httpResponse.text;
-            $ = cheerio.load(page);
-            var tmp = $(".pages a").last().attr("href");
-            var stop = tmp.split("/")[4];
-            for (var i = 1; i <= stop; i++) {
-                var starturl = "http://trips.tuniu.com/travelthread/t/0/"+i+"/0";
-                AV.Cloud.run("parselist", {"rules": rules, "url": starturl})
-                    .then(function (items) {
-                        //console.log(res);
-                        items.forEach(function (item) {
-                            console.log(item.url);
-                            var query = new AV.Query(DetailInfo);
-                            query.equalTo("url", item.url);
-                            query.find().then(function (result) {
-                                if(result.length==0){
-                                    return AV.Promise.as("Continue");
-                                }else{
-                                    return AV.Promise.error(item.url + " have been parsed");
-                                }
-                            }, function (err) {
-                                console.log("query error");
-                            }).then(function () {
-                                AV.Cloud.run("parsedetailpage", {"rules": rules, "url": item.url})
-                                    .then(function (ans) {
-                                        item.tours = ans;
-                                        saveInfo(item);
-                                    }
-                                )
-                            }, function (err) {
-                                console.log(err);
-                            });
-                        });
-                    }, function (err) {
-                        console.log("parselist err");
-                    });
-            }
-        },
-        error: function (httpResponse) {
-            console.error('Request failed with response code ' + httpResponse.status);
-        }
-    });
-
+    AV.Cloud.run("pagelist_tuniu")
+        .then(function(res){
+            res.forEach(function(surl){
+                var stop = 1;
+                AV.Cloud.httpRequest({
+                    url: surl,
+                    success: function (httpResponse) {
+                        var page = httpResponse.text;
+                        $ = cheerio.load(page);
+                        var tmp = $(".pages a").last().attr("href");
+                        var stop = tmp.split("/")[4];
+                        for (var i = 1; i <= stop; i++) {
+                            var starturl = surl.match(/http:\/\/trips.tuniu.com\/travelthread\/0\/\d+/)[0]+"/"+i+"/0";
+                            console.log("starturl = " + starturl);
+                            AV.Cloud.run("parselist", {"rules": rules, "url": starturl})
+                                .then(function (items) {
+                                    //console.log(res);
+                                    items.forEach(function (item) {
+                                        //console.log(item.url);
+                                        var query = new AV.Query(DetailInfo);
+                                        query.equalTo("url", item.url);
+                                        query.find().then(function (result) {
+                                            if(result.length==0){
+                                                return AV.Promise.as("Continue");
+                                            }else{
+                                                return AV.Promise.error(item.url + " have been parsed");
+                                            }
+                                        }, function (err) {
+                                            console.log("query error");
+                                        }).then(function () {
+                                            AV.Cloud.run("parsedetailpage", {"rules": rules, "url": item.url})
+                                                .then(function (ans) {
+                                                    item.tours = ans;
+                                                    saveInfo(item);
+                                                }
+                                            )
+                                        }, function (err) {
+                                            console.log(err);
+                                        });
+                                    });
+                                }, function (err) {
+                                    console.log("parselist err");
+                                });
+                        }
+                    },
+                    error: function (httpResponse) {
+                        console.error('Request failed with response code ' + httpResponse.status);
+                    }
+                });
+            })
+        });
+    response.success("done");
 
 });
 /**
@@ -783,14 +819,14 @@ AV.Cloud.define("lvmama",function(requset,response){
             $ = cheerio.load(page);
             var tmp = $(".wy_state_page a").length;
             var stop =  $(".wy_state_page a").eq(tmp-2).text();
-            console.log(stop);
+            //console.log(stop);
             for (var i = 1; i <= stop; i++) {
                 var starturl = "http://www.lvmama.com/trip/home/ajaxGetTrip?page="+i;
                 AV.Cloud.run("parselist", {"rules": rules, "url": starturl})
                     .then(function (items) {
                         //console.log(res);
                         items.forEach(function (item) {
-                            console.log(item.url);
+                            //console.log(item.url);
                             var query = new AV.Query(DetailInfo);
                             query.equalTo("url", item.url);
                             query.find().then(function (result) {
@@ -821,7 +857,7 @@ AV.Cloud.define("lvmama",function(requset,response){
             console.error('Request failed with response code ' + httpResponse.status);
         }
     });
-
+    response.success("done");
 
 });
 /**
@@ -841,10 +877,12 @@ AV.Cloud.define("daodao",function(requset,response){
                         //console.log(res);
                         items.forEach(function (item) {
                             console.log(item.url);
+                            var durl = item.url;
                             var query = new AV.Query(DetailInfo);
-                            query.equalTo("url", item.url);
+                            query.equalTo("url", durl);
                             query.find().then(function (result) {
                                 if(result.length==0){
+                                    console.log("continue");
                                     return AV.Promise.as("Continue");
                                 }else{
                                     return AV.Promise.error(item.url + " have been parsed");
@@ -852,7 +890,8 @@ AV.Cloud.define("daodao",function(requset,response){
                             }, function (err) {
                                 console.log("query error");
                             }).then(function () {
-                                AV.Cloud.run("parsedetailpage", {"rules": rules, "url": item.url})
+                                console.log("parsedetailpage");
+                                AV.Cloud.run("parsedetailpage", {"rules": rules, "url": durl})
                                     .then(function (ans) {
                                         item.tours = ans;
                                         saveInfo(item);
@@ -871,7 +910,7 @@ AV.Cloud.define("daodao",function(requset,response){
             console.error('Request failed with response code ' + httpResponse.status);
         }
     });
-
+    response.success("done");
 
 });
 /**
@@ -921,7 +960,7 @@ AV.Cloud.define("ctrip",function(request,response){
 
                         for(var i=1;i<=stop;i++){
                             var starturl = surl.replace(".html","")+"/t3-p"+i+".html";
-                            console.log(starturl);
+                            //console.log(starturl);
                             AV.Cloud.run("parselist",{"rules":rules,"url":starturl})
                                 .then(function(items) {
                                     items.forEach(function (item) {
@@ -943,12 +982,12 @@ AV.Cloud.define("ctrip",function(request,response){
                                                     saveInfo(item);
                                                 }
                                             )
-                                        }).then(function(err){
+                                        },function(err){
                                             console.log("have been parsed");
                                         });
                                     });
                                 },function(err) {
-                                    console.log("parselist err");
+                                    //console.log("parselist err");
                                 });
                         }
                     },
@@ -960,9 +999,8 @@ AV.Cloud.define("ctrip",function(request,response){
                 });
 
             })
-        }).then(function(){
-            response.success("done");
-        })
+        }) ;
+    response.success("done");
 });
 /**
  *deal with qyer
@@ -980,7 +1018,7 @@ AV.Cloud.define("pagelist_qyer",function(request,response){
                 //save basic info
                 var ans = $(e).find("a").attr("href");
                 res.push(ans);
-                console.log(res);
+                //console.log(res);
             });
         },
         error: function(httpResponse) {
@@ -1009,11 +1047,11 @@ AV.Cloud.define("qyer",function(request,response){
                         var tmp = $("[data-bn-ipg=pages-4]").attr("data-page");
                         if(tmp!=null)
                             stop = tmp;
-                        console.log(stop);
+                        //console.log(stop);
                         for(var i=1;i<=stop;i++){
                             var starturl = surl.replace(/_1\//,"")+"_"+i+"/";
 
-                            console.log(starturl);
+                            //console.log(starturl);
                             AV.Cloud.run("parselist",{"rules":rules,"url":starturl})
                                 .then(function(items) {
                                     items.forEach(function (item) {
@@ -1035,7 +1073,7 @@ AV.Cloud.define("qyer",function(request,response){
                                                     saveInfo(item);
                                                 }
                                             )
-                                        }).then(function(err){
+                                        },function(err){
                                             console.log("have been parsed");
                                         });
                                     });
@@ -1052,7 +1090,6 @@ AV.Cloud.define("qyer",function(request,response){
                 });
 
             })
-        }).then(function(){
-            response.success("done");
-        })
+        });
+    response.success("done");
 });
