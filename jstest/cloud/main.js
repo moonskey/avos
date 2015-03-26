@@ -92,20 +92,21 @@ var rules_daodao = {
     //save
     "source":"daodao",
     //in list
-    "eachitem":"li",
+    "eachitem":".stb-list li",
     "pre_url":"http://www.daodao.com",
     "needpre":"1",
     //"title":".title",
     "title":"$(e).find('.title').text()",
     //"startdate":".date",
-    "startdate":"$(e).find('.date').text()",
+    "startdate":"$(e).find('.info').text()",
+    "startdaterg":"1",
     //"duration":".days",
-    "duration":"$(e).find('.days').text()",
+    "duration":"",
     //"brief":".geo",
     "brief":"$(e).find('geo').text()",
     //"description":".places",
-    "description":"$(e).find('.info').text()",
-    "author":".user_name",
+    "description":"$(e).find('.route').text()",
+    "author":"$(e).find('.info').text().split('作者')[1] ",
 
     //in detail
     "authorindetail":".trip-user",
@@ -133,7 +134,7 @@ var rules_ctrip = {
     //"title":"h3",
     "title":"$(e).find('.ellipsis').text()",
     //"author":"",.split('发')[0]
-    "author":"$(e).find('.item-user').text()",
+    "author":"$(e).find('.item-user').text().split('发')[0]",
     //"startdate":".date",.split(';')[1]
     "startdate":"$(e).find('.item-user').text()",
     //"duration":".days",
@@ -144,7 +145,7 @@ var rules_ctrip = {
     "description":"$(e).find('.item-short').text()",
 
     //in detail
-    "authorindetail":".trip-user",
+    "authorindetail":"$('.ctd_head_right a[id=authorDisplayName]').text()",
     "detailitem":".ctd_content",
     //".date":".time",
     "date":"$(e).find('.time').text()",
@@ -210,10 +211,10 @@ var rules_chanyou = {
     //"duration":".days",
     "duration":"$(e).find('.trip-date').text().split('|')[1].split('天')[0]",
     //"brief":".geo",
-    "brief":"$(e).find('geo').text()",
+    "brief":"$(e).find('header').find('h1').text()",
     //"description":".places",
-    "description":"$(e).find('.info').text()",
-    "author":".user_name",
+    "description":"$(e).find('header').find('h1').text()",
+    "author":"",
 
     //in detail
     "authorindetail":".trip-user",
@@ -244,12 +245,12 @@ var rules_117go = {
     //"startdate":".date",
     "startdate":"$(e).find('.trip-date').text()",
     //"duration":".days",
-    "duration":"$(e).find('.trip-date').text()",
+    "duration": null,
     //"brief":".geo",
     "brief":"$(e).find('.tours-item-cities').text()",
     //"description":".places",
     "description":"$(e).find('.tours-item-cities').text()",
-    "author":".user_name",
+    "author":"",
     //
     "special_type":"2",
     //in detail
@@ -280,7 +281,7 @@ var rules_tuniu = {
     //"startdate":".date",
     "startdate":"$(e).find('.reader-info').find('span').text()",
     //"duration":".days",
-    "duration":"$(e).find('.trip-date').text().split('|')[1].split('天')[0]",
+    "duration":"",
     //"brief":".geo",
     "brief":"$(e).find('.tours-item-cities').text()",
     //"description":".places",
@@ -313,7 +314,7 @@ var rules_lvmama = {
     //"title":".title",
     "title":"$(e).find('.title').text()",
     //"startdate":".date",
-    "startdate":"$(e).find('.uploadInfo').text().split('|')[1]",
+    "startdate":"$(e).find('.uploadInfo').text().split('|')[1].split('发')[0]",
     //"duration":".days",
     "duration":"$(e).find('.uploadInfo').text().split('|')[2]",
     //"brief":".geo",
@@ -347,21 +348,42 @@ AV.Cloud.define("parselist",function(request,response){
         success: function(httpResponse) {
             var page = httpResponse.text;
             $=cheerio.load(page);
-            $(rules.eachitem).each(function(i,e){
+            $(rules.eachitem).each(function(i,e) {
                 //save outline info
-                var ans={};
-                var pageurl;
-                if(rules.needpre==2)
+                var ans = {};
+                var pageurl = null;
+                ans.type = "tour";
+                ans.title = eval(rules.title);
+                ans.startdate = eval(rules.startdate);
+                var duration = eval(rules.duration);
+                if (duration == null) {
+                    ans.duration = null;
+                }
+                else{
+                    var dt = duration.match(/\d+/);
+                    if(dt==null)
+                        ans.duration = null;
+                    else
+                        ans.duration = dt[0];
+                }
+
+                if (rules.needpre == 2) {
                     pageurl = rules.pre_url + $(e).parent().find(rules.eachitem).eq(i).attr('href');
+                    var startdate = eval(rules.startdate).match(/\d\d\d\d-\d\d-\d\d/);
+                    ans.startdate = startdate[0];
+                }
                 if(rules.needpre==1)
                     pageurl = rules.pre_url + $(e).find('a').attr('href');
                 if(rules.needpre==0)
                     pageurl =  $(e).find('a').attr('href');
-                ans.type="tour";
+                if(rules.startdaterg==1){
+                    var startdate = eval(rules.startdate).match(/\d\d\d\d-\d\d-\d\d/);
+                    if(startdate!=null)
+                        ans.startdate = startdate[0];
+                    else
+                        ans.startdate = null;
+                }
                 ans.url = pageurl;
-                ans.title = eval(rules.title);
-                ans.startdate = eval(rules.startdate);
-                ans.duration = eval(rules.duration);
                 ans.description = eval(rules.description);
                 ans.author = eval(rules.author);
                 ans.brief = eval(rules.brief);
@@ -484,9 +506,7 @@ AV.Cloud.define("hello",function(request,response){
 //deal with breadtrip
 AV.Cloud.define("breadtrip",function(request,response){
     rules = "rules_breadtrip";
-    loop = true;
-    var i = 0;
-    while(loop){
+    for(var i=0;i<472;i++){
         var starturl = "http://breadtrip.com/explore/new_hot/grid/?page="+i;
         console.log("starturl: " + starturl);
         AV.Cloud.run("parselist",{"rules":"rules_breadtrip","url":starturl})
@@ -516,9 +536,8 @@ AV.Cloud.define("breadtrip",function(request,response){
                 });
             },function(err) {
                 console.log("parselist err");
-                loop = false;
             });
-        i++;
+
     }
     response.success("success");
 });
@@ -617,10 +636,8 @@ AV.Cloud.define("qunar",function(requset,response){
         url: "http://travel.qunar.com/travelbook/list.htm?page=1&order=hot_heat",
         success: function (httpResponse) {
             var page = httpResponse.text;
-            console.log("13114");
             $ = cheerio.load(page);
             var tmp = $("[data-beacon=click_result_page]").last().text();
-            console.log(tmp);
             for (var i = 1; i <= tmp; i++) {
                 var starturl = "http://travel.qunar.com/travelbook/list.htm?page=" + i + "&order=hot_heat";
                 console.log(starturl);
@@ -666,9 +683,7 @@ AV.Cloud.define("qunar",function(requset,response){
  **/
 AV.Cloud.define("117go",function(request,response){
     var rules = "rules_117go";
-    loop = true;
-    var i = 0;
-    while(loop){
+    for(var i=1;i<626;i++){
         var starturl = "http://www.117go.com/data/index/featuredTours?p="+i;
         AV.Cloud.run("parselist",{"rules":rules,"url":starturl})
             .then(function(items) {
@@ -699,9 +714,7 @@ AV.Cloud.define("117go",function(request,response){
                 });
             },function(err) {
                 console.log("parselist err");
-                loop = false;
             });
-        i++;
     }
     response.success("success");
 })
