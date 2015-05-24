@@ -1,24 +1,10 @@
-/**
- * nine webs:
- * source    status
- * ctrip     done
- * daodao    done
- * lvmama    done
- * tuniu     done
- * chanyou   done
- * qyer      done
- * breadtrip done
- * qunar     done, sometimes maybe fault because of server
- * 117go     done
- */
 require("cloud/app.js");
 var cheerio = require('cheerio');
 var https = require('https');
 var DetailInfo = AV.Object.extend("DetailInfo");
-var async = require("async");
-var _ = require("underscore");
+
 /**
- *breadtrip, all done
+ *breadtrip,done,with all running, image done, images partiallydone
  * @type {{starturl: string, eachitem: string, title: string, startdate: string, duration: string, author: string, pre_url: string, needpre: string, authorindetail: string, detailitem: string, date: string, detaildescription: string}}
  */
 var rules_breadtrip = {
@@ -51,12 +37,11 @@ var rules_breadtrip = {
     "date": "$(e).find('span').first().text()",
     //"detaildescription":".text.photo-comment"
     "detaildescription": "$(e).find('.text.photo-comment').text()",
-    "images":"$(e).find('.photo-ctn').find('img')",
-    "maps":"$(ee).attr('data-original')"
+    "images":"$(e).find('.photo-ctn').find('a').attr('href')"
 };
 
 /**
- *qunar,done,with all running image done,leave to change?? html fault
+ *qunar,done,with all running image done
  * @type {{starturl: string, eachitem: string, title: string, startdate: string, duration: string, description: string, author: string, pre_url: string, needpre: string, authorindetail: string, detailitem: string, date: string, detaildescription: string}}
  */
 var rules_qunar = {
@@ -94,7 +79,7 @@ var rules_qunar = {
 };
 
 /**
- *daodao,all done, serial , with no latest pages
+ *daodao,done,with all running image fault???
  * @type {{starturl: string, testurl: string, class: string, eachitem: string, pre_url: string, needpre: string, title: string, startdate: string, duration: string, brief: string, description: string, author: string, authorindetail: string, detailitem: string, date: string, detaildescription: string}}
  */
 var rules_daodao = {
@@ -114,11 +99,11 @@ var rules_daodao = {
     //"duration":".days",
     "duration": "",
     //"brief":".geo",
-    "brief": "$(e).find('.geo').text()",
+    "brief": "$(e).find('geo').text()",
     //"description":".places",
     "description": "$(e).find('.route').text()",
     "author": "$(e).find('.info').text().split('作者')[1] ",
-    "image": "$(e).find('img').attr('lazy-src')",
+    "image": "$(e).find('a').find('img').attr('src')",
     //in detail
     "authorindetail": ".trip-user",
     "detailitem": ".strategy-content",
@@ -126,12 +111,11 @@ var rules_daodao = {
     "date": "$(e).find('.time').text()",
     //"detaildescription":".text"
     "detaildescription": "$(e).text()",
-    "images":"$(e).find('img')",
-    "maps":"$(ee).attr('src')"
+    "images": "$(e).find('img').attr('src')"
 };
 
 /**
- * ctrip, all done  ; in serial , latest pages
+ * ctrip,done ,with all running image fault
  * .journal-item? .li item will change?
  * @type {{starturl: string, testurl: string, class: string, eachitem: string, pre_url: string, needpre: string, title: string, startdate: string, duration: string, brief: string, description: string, author: string, authorindetail: string, detailitem: string, date: string, detaildescription: string}}
  */
@@ -165,13 +149,11 @@ var rules_ctrip = {
     "date": "$(e).find('.time').text()",
     //"detaildescription":".text"
     "detaildescription": "$(e).find('p').text()",
-    "image_indetail":"$('.ctd_head_box').find('img').attr('src')",
-    "images":"$(e).find('img')",
-    "maps":"$(ee).attr('data-original')"
+    "images":"$(e).find('img').attr('data-original')"
 };
 
 /**
- *qyer, all done
+ *qyer,done  image done
  * description not ideal
  * @type {{starturl: string, testurl: string, class: string, eachitem: string, pre_url: string, needpre: string, title: string, startdate: string, duration: string, brief: string, description: string, author: string, authorindetail: string, detailitem: string, date: string, detaildescription: string}}
  */
@@ -203,12 +185,11 @@ var rules_qyer = {
     "date": "$(e).find('.day_time').text()",
     //"detaildescription":".text"
     "detaildescription": "$(e).find('.note_row').find('p').text()",
-    "images":"$(e).find('img')",
-    "maps":"$(ee).attr('src')"
+    "images":"$(e).find('img').attr('src')"
 };
 
 /**
- * chanyou done,with all running
+ * chanyou done,with all running image done, images not done
  * parse detail
  * @type {{starturl: string, testurl: string, class: string, eachitem: string, pre_url: string, needpre: string, title: string, startdate: string, duration: string, brief: string, description: string, author: string, authorindetail: string, detailitem: string, date: string, detaildescription: string}}
  */
@@ -247,7 +228,7 @@ var rules_chanyou = {
 };
 
 /**
- * 117go,done,with all running
+ * 117go,done,with all running inmage fault???
  *
  * @type {{starturl: string, testurl: string, class: string, eachitem: string, pre_url: string, needpre: string, title: string, startdate: string, duration: string, brief: string, description: string, author: string, authorindetail: string, detailitem: string, date: string, detaildescription: string}}
  */
@@ -272,7 +253,7 @@ var rules_117go = {
     //"description":".places",
     "description": "$(e).find('.tours-item-cities').text()",
     "author": "",
-    "image":"$(e).find('img').attr('data-original')",
+    "image":"$(e).find('.tours-item-image').attr('src')",
     //
     "special_type": "2",
     //in detail
@@ -282,12 +263,11 @@ var rules_117go = {
     "date": "$(e).find('.t-day-sp-date').text()",
     //"detaildescription":".text"
     "detaildescription": "$(e).find('.t-feed-words.paragraph').text()",
-    "images":"$(e).find('img')",
-    "maps":"$(ee).attr('src')"
+    "images":"$(e).find('img').attr('src')"
 };
 
 /**
- * done, with all running
+ * done, with all running image done
  *tuniu
  * @type {{starturl: string, testurl: string, class: string, eachitem: string, pre_url: string, needpre: string, title: string, startdate: string, duration: string, brief: string, description: string, author: string, authorindetail: string, detailitem: string, date: string, detaildescription: string}}
  */
@@ -319,12 +299,11 @@ var rules_tuniu = {
     "date": "$(e).find('.t-day-sp-date').text()",
     //"detaildescription":".text"
     "detaildescription": "$(e).text()",
-    "images":"$(e).find('img')",
-    "maps":"$(ee).attr('data-src')"
+    "images":"$(e).find('img').attr('src')"
 };
 
 /**
- * done, with all running, serial and latest pages
+ * done, with all running
  *lvmama
  * @type {{starturl: string, testurl: string, class: string, eachitem: string, pre_url: string, needpre: string, title: string, startdate: string, duration: string, brief: string, description: string, author: string, authorindetail: string, detailitem: string, date: string, detaildescription: string}}
  */
@@ -357,8 +336,7 @@ var rules_lvmama = {
     "date": "$(e).find('.t_dayTime').find('span').text()",
     //"detaildescription":".text"
     "detaildescription": "$(e).find('dd').text()",
-    "images":"$(e).find('img')",
-    "maps":"$(ee).attr('data-src')"
+    "images":"$(e).find('img').attr('src')"
 };
 
 /**
@@ -420,14 +398,13 @@ AV.Cloud.define("parselist", function (request, response) {
                 ans.source = rules.source;
                 ans.image = eval(rules.image);
                 res.push(ans);
-
             });
-            response.success(res);
         },
         error: function (httpResponse) {
             console.error(url + 'Request failed with response code ' + httpResponse.status);
-            return AV.Promise.error(url + httpResponse.status);
         }
+    }).then(function () {
+        response.success(res);
     });
 });
 /**
@@ -444,89 +421,66 @@ AV.Cloud.define("parsedetailpage", function (request, response) {
     //var rules = rules_qunar;
     var url = request.params.url;
     var res = [];
-    var result={};
     AV.Cloud.httpRequest({
         url: url,
         success: function (httpResponse) {
-            if(httpResponse.status >=200 && httpResponse.status<300){
-                var page = httpResponse.text;
-                $ = cheerio.load(page);
-                var image_indetail = eval(rules.image_indetail);
-                result.image_indetail = image_indetail;
-                // var str = /(?=parse)/;
-                if (rules.regax == 1) {
-                    var tmp = page.replace(/[.\S\s]*TripsCollection\(/, "").replace(/\,\{parse.+/, "");
-                    if (tmp == null)
-                        response.success(null);
-                    var arr = JSON.parse(tmp);
-                    var index = -1;
-                    var ans = {};
-                    var images = [];
-                    var len = arr.length - 1;
-                    for (var item=0; item<len+1;item++) {
-                        if (arr[item].trip_date == null && index>-1) {
-                            res[index].description = res[index].description + arr[item].description + "\n\r";
-                            if(arr[item].photo!=null)
-                                images.push(arr[item].photo.src);
-                            if(item<len && arr[item+1].trip_date != null)
-                                res[index].images = images;
-                            if(item == len)
-                                res[index].images = images;
-                        } else {
-                            index++;
-                            ans.index = index;
-                            ans.date = arr[item].trip_date;
-                            ans.description = "";
-                            res.push(ans);
-                            ans = {};
-                            images = [];
-                        }
+            var page = httpResponse.text;
+            $ = cheerio.load(page);
+            // var str = /(?=parse)/;
+            if (rules.regax == 1) {
+                var tmp = page.replace(/[.\S\s]*TripsCollection\(/, "").replace(/\,\{parse.+/, "");
+                if (tmp == null)
+                    response.success(null);
+                var arr = JSON.parse(tmp);
+                var index = -1;
+                var ans = {};
+                for (var item in arr) {
+                    if (arr[item].trip_date == null) {
+                        res[index].description = res[index].description + arr[item].description + "\n\r";
+                    } else {
+                        index++;
+                        ans.index = index;
+                        ans.date = arr[item].trip_date;
+                        ans.description = "";
+                        res.push(ans);
+                        ans = {};
                     }
                 }
-                if (rules.regax == 2) {
-                    $(".t-day-spliter").each(function (i, e) {
-                        var ans = {};
-                        var idstr = "a[data-day=" + (i + 1) + "]";
-                        ans.index = i;
-                        ans.date = $(e).find(".t-day-sp-date").text();
-                        var images =[];
-                        var des = "";
-                        $(e).parent().find(idstr).each(function (i, e) {
-                            var idx = $(e).attr("data-feed");
-                            var str = "[id=tFeed" + idx + "]";
-                            var pt = $(e).parent().parent().find(str).find(".t-feed-words").text();
-                            var img = $(e).parent().parent().find(str).find("img").attr('data-original');
-                            images.push(img);
-                            des = des + pt + "\n\r";
-                        });
-                        ans.description = des;
-                        ans.images = images;
-                        res.push(ans);
+            }
+            if (rules.regax == 2) {
+                $(".t-day-spliter").each(function (i, e) {
+                    var ans = {};
+                    var idstr = "a[data-day=" + (i + 1) + "]";
+                    ans.index = i;
+                    ans.date = $(e).find(".t-day-sp-date").text();
+                    var des = "";
+                    $(e).parent().find(idstr).each(function (i, e) {
+                        var idx = $(e).attr("data-feed");
+                        var str = "[id=tFeed" + idx + "]";
+                        var pt = $(e).parent().parent().find(str).find(".t-feed-words").text();
+                        des = des + pt + "\n\r";
                     });
-                }
-                else {
-                    $(rules.detailitem).each(function (i, e) {
-                        var ans = {};
-                        ans.index = i;
-                        //ans.date = $(e).find(rules.date).first().text();
-                        ans.date = eval(rules.date);
-                        ans.description = eval(rules.detaildescription);
-
-                        var images = _.map(eval(rules.images),function(ee){
-                            return eval(rules.maps);
-                        })
-                        ans.images = images;
-                        res.push(ans);
-                    });
-                }
-                result.tours = res;
-                response.success(result);
+                    ans.description = des;
+                    res.push(ans);
+                });
+            }
+            else {
+                $(rules.detailitem).each(function (i, e) {
+                    var ans = {};
+                    ans.index = i;
+                    //ans.date = $(e).find(rules.date).first().text();
+                    ans.date = eval(rules.date);
+                    ans.description = eval(rules.detaildescription);
+                    ans.images = eval(rules.images);
+                    res.push(ans);
+                });
             }
         },
         error: function (httpResponse) {
-            response.error(url + ' Request failed with response code ' + httpResponse.status);
-            return AV.Promise.error(url + httpResponse.status);
+            console.error(url + 'Request failed with response code ' + httpResponse.status);
         }
+    }).then(function () {
+        response.success(res);
     });
 });
 /**
@@ -554,11 +508,7 @@ var saveInfo = function (ans) {
 AV.Cloud.define("hello", function (request, response) {
     response.success("success");
 });
-
-/**
- * deal with list of list, the outer loop
- *
-*/
+//deal with list of list, the outer loop
 var doList = function (cur,stop,unchanged,rules) {
     var promise = new AV.Promise();
     setTimeout(function(){
@@ -594,7 +544,6 @@ var doList = function (cur,stop,unchanged,rules) {
                         stop = tmp;
                 }
                 doLoop(1,stop+1,surl,rules);
-                //Serial(1,stop+1,surl,rules);
             },
             error: function (httpResponse) {
                 console.error('Request failed with response code ' + httpResponse.status);
@@ -603,7 +552,7 @@ var doList = function (cur,stop,unchanged,rules) {
         promise.resolve('done');
         if(cur<stop){
             cur++;
-            doList(cur,stop,rules,unchanged);
+            doList(cur,stop,unchanged,rules);
         }else{
             console.log('all done')
         }
@@ -611,18 +560,17 @@ var doList = function (cur,stop,unchanged,rules) {
     return promise;
 }
 
-/**
- * deal with list
- * @param cur
- * @param stop
- * @param unchanged
- * @param rules
- * @returns {AV.Promise}
- */
+
+AV.Cloud.define("breadtrip", function (request, response) {
+    var rules = "rules_breadtrip";
+    var uc = "http://breadtrip.com/explore/new_hot/grid/?page=";
+    doLoop(0,472,uc,rules);
+    response.success("success");
+});
+
 var doLoop = function(cur,stop,unchanged,rules){
     var promise = new AV.Promise();
     setTimeout(function(){
-        promise.resolve('done');
         var starturl = unchanged;
         if(rules == "rules_breadtrip")
             starturl = unchanged + cur;
@@ -641,18 +589,17 @@ var doLoop = function(cur,stop,unchanged,rules){
         if(rules == "rules_daodao")
             starturl = unchanged;
         if(rules == "rules_ctrip")
-            starturl = unchanged.replace(".html", "") + "/t2-p" + cur + ".html";
+            starturl = unchanged.replace(".html", "") + "/t3-p" + cur + ".html";
         console.log(starturl);
         AV.Cloud.run("parselist", {"rules": rules, "url": starturl})
             .then(function (items) {
-                doInner(0,items.length,items,rules);
-                /*items.forEach(function (item) {
+                items.forEach(function (item) {
                     var query = new AV.Query(DetailInfo);
                     query.equalTo("url", item.url);
                     //if find,do nothing
                     query.find().then(function (result) {
                         if (result.length == 0) {
-                            console.log(item.url + " being parsed");
+                            console.log(item.url + "being parsed");
                             return AV.Promise.as("Continue");
                         } else {
                             return AV.Promise.error(item.url + " have been parsed");
@@ -663,20 +610,17 @@ var doLoop = function(cur,stop,unchanged,rules){
                     }).then(function () {
                         AV.Cloud.run("parsedetailpage", {"rules": rules, "url": item.url})
                             .then(function (ans) {
-                                item.tours = ans.tours;
-                                if(rules == "rules_ctrip"){
-                                    item.image = ans.image_indetail;
-                                }
+                                item.tours = ans;
                                 saveInfo(item);
                             })
                     }, function (err) {
-                        cur = 8;
                         console.log(err);
                     });
-                });*/
+                });
          }, function (err) {
                 console.log("parselist err");
          });
+        promise.resolve('done');
         if(cur<stop){
             cur++;
             doLoop(cur,stop,unchanged,rules);
@@ -686,72 +630,6 @@ var doLoop = function(cur,stop,unchanged,rules){
     }, 2000);
     return promise;
 }
-
-var doInner = function(cur,stop,items,rules){
-    var need_stop = true;
-    var promise = new AV.Promise();
-    setTimeout(function(){
-        promise.resolve('done');
-        var item = items[cur];
-        var query = new AV.Query(DetailInfo);
-        query.equalTo("url", item.url);
-        query.find().then(function (result) {
-            if (result.length == 0) {
-                console.log(item.url + " being parsed");
-                return AV.Promise.as("Continue");
-            } else {
-                return AV.Promise.error(item.url + " have been parsed");
-            }
-        }, function (err) {
-            console.log(item.url + "query error");
-            return AV.Promise.as("Create new class");
-        }).then(function () {
-            AV.Cloud.run("parsedetailpage", {"rules": rules, "url": item.url})
-                .then(function (ans) {
-                    item.tours = ans.tours;
-                    if(rules == "rules_ctrip"){
-                        item.image = ans.image_indetail;
-                    }
-                    saveInfo(item);
-                })
-        }, function (err) {
-            console.log(err);
-            //cur = stop;
-            //promise.reject();
-        }).then(function(){
-            if(cur<stop-1){
-                cur++;
-                doInner(cur,stop,items,rules);
-            }else{
-                console.log('all done')
-            }
-        },function(err) {
-            if (!need_stop) {
-                if(cur<stop-1){
-                    cur++;
-                    doInner(cur,stop,items,rules);
-                }
-            }
-            else {
-                console.log("function stop");
-            }
-        })
-    }, 200);
-    return promise;
-}
-
-/**
- * deal with breadtrip, all done
- */
-AV.Cloud.define("breadtrip", function (request, response) {
-    var rules = "rules_breadtrip";
-    var url = "http://breadtrip.com";
-    var ans = [];
-    ans.push(url);
-    Serial(ans,rules);
-    //doLoop(0,472,uc,rules);
-    response.success("success");
-});
 
 /**
 *deal with qyer
@@ -785,8 +663,7 @@ AV.Cloud.define("qyer",function(request,response){
     var rules = "rules_qyer";
     AV.Cloud.run("pagelist_qyer")
         .then(function(res){
-            //doList(0,res.length,res,rules);
-            Serial(res,rules);
+            doList(0,res.length,res,rules);
         });
     response.success("done");
  });
@@ -814,14 +691,13 @@ AV.Cloud.define("pagelist_chanyouji", function (request, response) {
     });
 });
 /**
- * deal with chanyouji,all done
+ * chanyouji,dealwith chanyouji
  **/
 AV.Cloud.define("chanyouji", function (request, response) {
     var rules = "rules_chanyou";
     AV.Cloud.run("pagelist_chanyouji")
         .then(function (res) {
-            //doList(0,res.length,res,rules);
-            Serial(res,rules);
+            doList(0,res.length,res,rules);
         });
     response.success("done");
 });
@@ -831,41 +707,34 @@ AV.Cloud.define("chanyouji", function (request, response) {
  */
 AV.Cloud.define("qunar", function (requset, response) {
     var rules = "rules_qunar";
-    var url = "http://travel.qunar.com/travelbook/list.htm?page=1&order=hot_heat";
-    var ans = [];
-    ans.push(url);
-    Serial(ans,rules);
-    /*AV.Cloud.httpRequest({
+    AV.Cloud.httpRequest({
         url: "http://travel.qunar.com/travelbook/list.htm?page=1&order=hot_heat",
         success: function (httpResponse) {
             var page = httpResponse.text;
             $ = cheerio.load(page);
             var tmp = $("[data-beacon=click_result_page]").last().text();
-            var uc = "http://travel.qunar.com/travelbook/list.htm?page=1&order=hot_heat";
+            var uc = starturl = "http://travel.qunar.com/travelbook/list.htm?page=1&order=hot_heat";
             doLoop(1,tmp+1,uc,rules);
         },
         error: function (httpResponse) {
             console.error('Request failed with response code ' + httpResponse.status);
         }
-    });*/
+    });
     response.success("done");
 });
 
 /**
- * deal with 117go, all done
+ * deal with 117go
  **/
 AV.Cloud.define("117go", function (request, response) {
     var rules = "rules_117go";
-    var url = "http://www.117go.com/";
-    var res = [];
-    res.push(url);
-    //doLoop(1,626,unchanged,rules);
-    Serial(res,rules);
+    var unchanged = "http://www.117go.com/data/index/featuredTours?p=";
+    doLoop(1,626,unchanged,rules);
     response.success("success");
 });
 
 /**
- * tuniu pagelist list
+ * tuniu pagelist
  */
 AV.Cloud.define("pagelist_tuniu", function (request, response) {
     var url = "http://trips.tuniu.com/";
@@ -878,10 +747,7 @@ AV.Cloud.define("pagelist_tuniu", function (request, response) {
             $(".sub_item li").each(function (i, e) {
                 //save basic info
                 var ans = "http://trips.tuniu.com" + $(e).find("a").attr("href");
-                var pre = ans.substring(0,36);
-                var suf = ans.substring(37,ans.length);
-                var listpage = pre + 'z' + suf;
-                res.push(listpage);
+                res.push(ans);
             });
         },
         error: function (httpResponse) {
@@ -892,29 +758,24 @@ AV.Cloud.define("pagelist_tuniu", function (request, response) {
     });
 });
 /**
- *deal with tuniu, all done
+ *deal with tuniu
  **/
 AV.Cloud.define("tuniu", function (requset, response) {
     var rules = "rules_tuniu";
     AV.Cloud.run("pagelist_tuniu")
         .then(function (res) {
-            //doList(0,res.length,res,rules);
-            Serial(res,rules);
+            doList(0,res.length,res,rules);
         });
     response.success("done");
 
 });
 
 /**
- *deal with lvmama, all done
+ *deal with lvmama
  **/
 AV.Cloud.define("lvmama", function (requset, response) {
     var rules = "rules_lvmama";
-    var arr = [];
-    var url = "http://www.lvmama.com/trip/list-0-0-0-0-2-1.html#list";
-    arr.push(url);
-    Serial(arr,rules);
-    /*AV.Cloud.httpRequest({
+    AV.Cloud.httpRequest({
         url: "http://www.lvmama.com/trip/",
         success: function (httpResponse) {
             var page = httpResponse.text;
@@ -922,21 +783,18 @@ AV.Cloud.define("lvmama", function (requset, response) {
             var tmp = $(".wy_state_page a").length;
             var stop = $(".wy_state_page a").eq(tmp - 2).text();
             //console.log(stop);
-
             var uc = "http://www.lvmama.com/trip/home/ajaxGetTrip?page=";
             doLoop(1,stop+1,uc,rules);
         },
         error: function (httpResponse) {
             console.error("www.lvmama " + 'Request failed with response code ' + httpResponse.status);
         }
-    });*/
+    });
     response.success("done");
 
 });
 
-/**
- * deal with daodao lists
- * */
+/**deal with daodao*/
 AV.Cloud.define("pagelist_daodao",function(request,response){
     var url= "http://www.tripadvisor.cn/TourismBlog-g293915-Thailand.html";
     var res = [];
@@ -958,20 +816,19 @@ AV.Cloud.define("pagelist_daodao",function(request,response){
     });
 })
 /**
- *deal with daodao, all done
+ *deal with daodao
  **/
 AV.Cloud.define("daodao", function (requset, response) {
     var rules = "rules_daodao";
     AV.Cloud.run("pagelist_daodao")
         .then(function (res) {
-            //doList(0,res.length,res,rules);
-            Serial(res,rules);
+            doList(0,res.length,res,rules);
         });
     response.success("done");
 });
 
 /**
- *get list of ctrip lists
+ *deal with ctrip
  **/
 AV.Cloud.define("pagelist_ctrip", function (request, response) {
     var url = "http://you.ctrip.com/travels";
@@ -995,188 +852,13 @@ AV.Cloud.define("pagelist_ctrip", function (request, response) {
     });
 });
 /**
- * ctrip,dealwith ctrip, all done
+ * ctrip,dealwith ctrip
  **/
 AV.Cloud.define("ctrip", function (request, response) {
     var rules = "rules_ctrip";
     AV.Cloud.run("pagelist_ctrip")
         .then(function (res) {
-            //doList(0,0,res,rules);
-            Serial(res,rules);
+            doList(0,res.length,res,rules);
         });
     response.success("done");
 });
-
-var Serial = function(arrs,rules){
-    //console.log(arrs.length);
-    async.eachSeries(arrs,function(pitem,callback){
-        setTimeout(function(){
-            var listurl = pitem;
-            console.log(listurl);
-            var stop = 1;
-            AV.Cloud.httpRequest({url:listurl})
-                .then(function(httpResponse){
-                    var page = httpResponse.text;
-                    $ = cheerio.load(page);
-                    var ans = [];
-                    if(rules == "rules_ctrip"){
-                        var tmp = $(".pager_v1 span .numpage").text();
-                        if (tmp != null)
-                            stop = tmp;
-                        for(var ii=1;ii<=stop;ii++){
-                            var listpage = listurl.replace(".html", "") + "/t2-p" + ii + ".html";
-                            ans.push(listpage);
-                        }
-                    }
-                    if(rules == "rules_daodao"){
-                        ans.push(listurl);
-                    }
-                    if(rules == "rules_lvmama"){
-                        var tmp = $(".wy_state_page a").length;
-                        stop = $(".wy_state_page a").eq(tmp - 2).text();
-                        console.log(stop);
-                        for(var ii=1;ii<=stop;ii++) {
-                            var listpage = "http://www.lvmama.com/trip/home/ajaxGetTrip?=" + ii;
-                            ans.push(listpage);
-                        }
-                    }
-                    if(rules == "rules_tuniu"){
-                        var tmp = $(".pages a").last().attr("href");
-                        if(tmp!=null)
-                            var stop = tmp.split("/")[4];
-                        for(var ii=1;ii<=stop;ii++) {
-                            var listpage = listurl.match(/http:\/\/trips.tuniu.com\/travelthread\/z\/\d+/)[0] + "/" + ii + "/0";
-                            ans.push(listpage);
-                        }
-                    }
-                    if(rules == "rules_chanyou"){
-                        var tmp = $(".last a").attr("href");
-                        if (tmp != null)
-                            stop = tmp.replace(/.*page=/, "").replace(/&.*/, "");
-                        for(var ii=1;ii<=stop;ii++) {
-                            var listpage = listurl + "&page=" + ii;
-                            ans.push(listpage);
-                        }
-                    }
-                    if(rules == "rules_qyer"){
-                        var tmp = $("[data-bn-ipg=pages-4]").attr("data-page");
-                        if(tmp!=null)
-                            stop = tmp;
-                        for(var ii=1;ii<=stop;ii++) {
-                            var listpage = listurl.replace(/_1\//,"")+"_"+ii+"/";
-                            ans.push(listpage);
-                        }
-                    }
-                    if(rules == "rules_117go"){
-                        stop = 626;
-                        for(var ii=1;ii<=stop;ii++) {
-                            var listpage = "http://www.117go.com/data/index/featuredTours?p=" + ii;
-                            ans.push(listpage);
-                        }
-                    }
-                    if(rules == "rules_breadtrip"){
-                        stop = 472;
-                        for(var ii=1;ii<=stop;ii++) {
-                            var listpage = "http://breadtrip.com/explore/new_hot/grid/?page=" + ii;
-                            ans.push(listpage);
-                        }
-                    }
-                    if(rules == "rules_qunar"){
-                        var tmp = $("[data-beacon=click_result_page]").last().text();
-                        if(tmp!=null)
-                            stop = tmp;
-                        for(var ii=1;ii<=stop;ii++) {
-                            var listpage = "http://travel.qunar.com/travelbook/list.htm?page=" + ii + "&order=hot_heat";
-                            ans.push(listpage);
-                        }
-                    }
-                    //console.log("all pages = " + ans.length);
-                    async.eachSeries(ans,function(litem,calmid){
-                        setTimeout(function(){
-                            var starturl = litem;
-                            //console.log("starturl = " + starturl);
-                            AV.Cloud.run("parselist", {"rules": rules, "url": starturl})
-                                .then(function (items) {
-                                    console.log("detailpage = " + items.length);
-                                    async.eachSeries(items,function(item,callinner){
-                                        setTimeout(function () {
-                                            console.log("page = " + item.url);
-                                            var query = new AV.Query(DetailInfo);
-                                            query.equalTo("url", item.url);
-                                            query.find().then(function (result) {
-                                                if (result.length == 0) {
-                                                    console.log(item.url + " being parsed");
-                                                    return AV.Promise.as("Continue");
-                                                } else {
-                                                    //to skip this one
-                                                    //calmid("this class have been parsed");
-                                                    return AV.Promise.error(item.url + " have been parsed");
-                                                }
-                                            }, function (err) {
-                                                console.log(item.url + " query error");
-                                                return AV.Promise.as("Create new class");
-                                            }).then(function () {
-                                                AV.Cloud.run("parsedetailpage", {"rules": rules, "url": item.url})
-                                                    .then(function (ans) {
-                                                        item.tours = ans.tours;
-                                                        if (rules == "rules_ctrip") {
-                                                            item.image = ans.image_indetail;
-                                                        }
-                                                        if( rules == "rules_daodao"){
-                                                            item.duration = ''+ans.tours.length;
-                                                        }
-                                                        if( rules == "rules_117go"){
-                                                            item.duration = ''+ans.tours.length;
-                                                        }
-                                                        saveInfo(item);
-                                                        callinner(null,item);
-                                                    },function(err){
-                                                        console.log(err);
-                                                        callinner(null,item);
-                                                    })
-                                            }, function (err) {
-                                                console.log(err);
-                                                //fist time
-                                                callinner(null,item);
-                                            });
-                                        }, 1000);
-                                    },function(err){
-                                        console.log("inner loop " + err);
-                                        calmid(null,litem);
-                                    });
-                                },function(err){
-                                    console.log(err);
-                                    calmid(null,litem);
-                                });
-                        },1000);
-                    },function(err){
-                        console.log("stop parse list page, and next class " + err);
-                        callback(null,pitem);
-                    });
-                },function(err){
-                    console.log(err);
-                    callback(null,pitem);
-                })
-        },1000);
-    },function(err){
-        console.log("out loop" + err);
-    })
-}
-
-/*var test = function(a,cb) { // <-- no callback here
-    setTimeout(function () {
-       console.log(a);
-        cb(null,a);
-    }, 2000);
-}
-test = sync(test);
-// From fiber environment
-sync.fiber(function(){
-    var arr = [1,2,3,4,5];
-    for(var i=0;i<5;i++){
-        for(var j=1;j<i;j++){
-            test(i+j);
-        }
-
-    }
-})*/
